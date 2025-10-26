@@ -1,41 +1,99 @@
 pipeline {
-    agent any
-    environment {
-        DOCKER_IMAGE = 'webcece:latest'
-    }
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/embuntiara/web-cece.git',
-                    credentialsId: 'github-token'
-            }
-        }
+  agent any
 
-        stage('Build Docker Image') {
-            steps {
-                bat 'docker build -t %DOCKER_IMAGE% .'
-            }
-        }
+  environment {
+    COMPOSE_FILE = 'docker-compose.ci.yml'
+    IMAGE_NAME = 'webcece:ci'
+  }
 
-        stage('Run Container') {
-            steps {
-                bat 'docker run -d -p 8000:8000 --name webcece %DOCKER_IMAGE%'
-            }
-        }
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
 
-        stage('Migrate Database') {
-            steps {
-                bat 'docker exec webcece php artisan migrate --force'
-            }
-        }
+    stage('Build & Up') {
+      steps {
+        echo 'Building images and starting containers (CI)...'
+        sh 'docker compose -f $COMPOSE_FILE up -d --build'
+      }
     }
-    post {
-        always {
-            echo '❌ Build gagal.'
-        }
-        success {
-            echo '✅ Build dan deploy sukses!'
-        }
+
+    stage('Wait for MySQL') {
+      steps {
+        echo 'Waiting for MySQL to be ready...'
+        sh '''
+        for i in $(seq 1 60); do
+          docker compose -f $COMPOSE_FILE exec -T mysql mysqladmin ping -h localhost -proot >/dev/null 2>&1 && break
+          echo "waiting for mysql... ($i)"
+          sleep 2
+        done
+        '''
+      }
     }
+
+    stage('Migrate') {
+      steps {
+        echo 'Running migrations'
+        sh 'docker compose -f $COMPOSE_FILE exec -T app php artisan migrate --force'
+      }
+    }
+
+    stage('Optional: tests') {
+      steps {
+        echo 'Run tests here if desired'
+      }
+    }
+  }
+
+  post {
+    always {
+      echo 'Tearing down'
+      sh 'docker compose -f $COMPOSE_FILE down -v'
+    }
+  }
+}
+pipeline {
+  agent any
+
+  environment {
+    COMPOSE_FILE = 'docker-compose.ci.yml'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build & Up (Windows)') {
+      steps {
+        echo 'Building images and starting containers (Windows agent)'
+        bat 'docker compose -f %COMPOSE_FILE% up -d --build'
+      }
+    }
+
+    stage('Wait for MySQL') {
+      steps {
+        echo 'Waiting for MySQL (Windows)...'
+        bat 'powershell -Command "for ($i=0; $i -lt 60; $i++) { try { docker compose -f %COMPOSE_FILE% exec -T mysql mysqladmin ping -h localhost -proot > $null 2>&1; if ($LASTEXITCODE -eq 0) { break } } catch { } Start-Sleep -Seconds 2 }"'
+      }
+    }
+
+    stage('Migrate') {
+      steps {
+        echo 'Running migrations (Windows)'
+        bat 'docker compose -f %COMPOSE_FILE% exec -T app php artisan migrate --force'
+      }
+    }
+  }
+
+  post {
+    always {
+      echo 'Cleaning up (Windows)'
+      bat 'docker compose -f %COMPOSE_FILE% down -v'
+    }
+  }
 }

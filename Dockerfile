@@ -34,3 +34,4 @@ COPY --from=build /var/www/html /var/www/html
 
 EXPOSE 9000
 CMD ["php-fpm"]
+0.0", "--port=8000"]
