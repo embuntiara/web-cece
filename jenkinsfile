@@ -10,19 +10,28 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t webcece .'
+                bat '''
+                echo Building Docker image...
+                docker build -t webcece .
+                '''
             }
         }
 
         stage('Run Containers') {
             steps {
-                bat 'docker compose up -d'
+                bat '''
+                echo Running containers...
+                docker compose up -d
+                '''
             }
         }
 
         stage('Migrate Database') {
             steps {
-                bat 'docker exec webcece php artisan migrate --force'
+                bat '''
+                echo Migrating database...
+                docker exec webcece php artisan migrate --force
+                '''
             }
         }
     }
