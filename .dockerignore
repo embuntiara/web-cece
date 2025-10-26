@@ -1,0 +1,11 @@
+vendor/
+node_modules/
+.git/
+.env
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/.vscode/
+/.idea/
+npm-debug.log
+docker-compose.override.yml
