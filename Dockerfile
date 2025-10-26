@@ -1,22 +1,24 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
-
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Set working directory
 WORKDIR /var/www/html
 
-# Copy existing application directory contents
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git unzip zip curl libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Install composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copy only composer files first
+COPY composer.json composer.lock ./
+
+# Install composer dependencies (pakai cache layer)
+RUN composer install --no-dev --prefer-dist --no-interaction --no-scripts
+
+# Copy the rest of the project
 COPY . .
 
-# Install Laravel dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer dump-autoload --optimize
 
-# Expose port 8000 and start Laravel's development server
-EXPOSE 8000
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php-fpm"]
