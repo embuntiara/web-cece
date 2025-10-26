@@ -2,37 +2,50 @@ pipeline {
     agent any
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/embuntiara/web-cece.git'
+                git branch: 'main', url: 'https://github.com/USERNAME/REPOSITORY.git'
             }
         }
 
         stage('Build Docker Image') {
-    steps {
-        script {
-            docker.build('webcece:latest', '--cache-from=webcece:latest .')
-        }
-    }
-}
-
-
-        stage('Run Containers') {
             steps {
-                bat '''
-                echo Running containers...
-                docker compose up -d
-                '''
+                script {
+                    // Build image dengan cache (super penting!)
+                    docker.build('webcece:latest', '--cache-from=webcece:latest .')
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    // Jalankan container untuk test/migrate
+                    sh 'docker run -d --rm --name webcece -p 9000:9000 webcece:latest'
+                }
             }
         }
 
         stage('Migrate Database') {
             steps {
-                bat '''
-                echo Migrating database...
-                docker exec webcece php artisan migrate --force
-                '''
+                script {
+                    // Jalankan migrate (kalau kamu pakai .env)
+                    sh 'docker exec webcece php artisan migrate --force || true'
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            // Hentikan container setelah selesai
+            sh 'docker stop webcece || true'
+        }
+        success {
+            echo '✅ Build sukses!'
+        }
+        failure {
+            echo '❌ Build gagal.'
         }
     }
 }
