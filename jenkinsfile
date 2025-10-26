@@ -9,13 +9,13 @@ pipeline {
         }
 
         stage('Build Docker Image') {
-            steps {
-                bat '''
-                echo Building Docker image...
-                docker build -t webcece .
-                '''
-            }
+    steps {
+        script {
+            docker.build('webcece:latest', '--cache-from=webcece:latest .')
         }
+    }
+}
+
 
         stage('Run Containers') {
             steps {
