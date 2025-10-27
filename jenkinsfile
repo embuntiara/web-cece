@@ -13,12 +13,12 @@ pipeline {
       }
     }
 
-    stage('Build & Up') {
-      steps {
+ stage('Build & Up') {
+    steps {
         echo 'Building images and starting containers (CI)...'
-        sh 'docker compose -f $COMPOSE_FILE up -d --build'
-      }
+        bat 'docker-compose up -d'
     }
+}
 
     stage('Wait for MySQL') {
       steps {
