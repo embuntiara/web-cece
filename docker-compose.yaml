@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Laravel app (PHP)
+  # Laravel app
   app:
     build:
       context: .
@@ -15,9 +15,10 @@ services:
     networks:
       - laravel
     ports:
-      - "8083:8000"
+      - "8083:8000" # gunakan artisan serve jika mau langsung akses browser
     depends_on:
       - mysql
+    command: php artisan serve --host=0.0.0.0 --port=8000
 
   # Database MySQL
   mysql:
@@ -36,7 +37,7 @@ services:
     networks:
       - laravel
 
-  # phpMyAdmin (opsional, buat akses database lewat browser)
+  # phpMyAdmin (opsional)
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     container_name: phpmyadmin
